@@ -2,10 +2,28 @@ from subprocess import Popen, PIPE
 
 import sublime
 import sublime_plugin
+import re
+
+lineExpPEP8 = re.compile(r"(.*):(\d+):(\d+):\s+(.*)")
+lineExpPyflakes = re.compile(r"(.*):(\d+):\s+(.*)")
 
 
-CHECKERS = ['/Users/vorushin/.virtualenvs/answers/bin/pep8',
-            '/Users/vorushin/.virtualenvs/answers/bin/pyflakes']
+def parsePEP8(line):
+    match = lineExpPEP8.match(line)
+    if match is not None:
+        filename, lineno, col, text = match.groups()
+        return (filename, lineno, col, text)
+
+
+def parsePyflakes(line):
+    match = lineExpPyflakes.match(line)
+    if match is not None:
+        filename, lineno, text = match.groups()
+        return (filename, lineno, 0, text)
+
+PYTHON = "python.exe"
+CHECKERS = [('c:\Python26\Scripts\pep8-script.py', parsePEP8),
+            ('c:\Python26\Scripts\pyflakes-script.py', parsePyflakes)]
 
 
 global view_messages
@@ -34,15 +52,16 @@ def check_and_mark(view):
 
     messages = []
 
-    for checker in CHECKERS:
-        p = Popen([checker, view.file_name()], stdout=PIPE, stderr=PIPE)
+    for checker, regexp in CHECKERS:
+        p = Popen([PYTHON, checker, view.file_name()],
+            stdout=PIPE, stderr=PIPE)
         stdout, stderr = p.communicate(None)
         if stdout:
             print stdout
         if stderr:
             print stderr
-        messages += parse_messages(stdout)
-        messages += parse_messages(stderr)
+        messages += parse_messages(stdout, regexp)
+        messages += parse_messages(stderr, regexp)
 
     outlines = [view.full_line(view.text_point(m['lineno'], 0)) \
                 for m in messages]
@@ -75,29 +94,16 @@ def check_and_mark(view):
     view_messages[view.id()] = line_messages
 
 
-def parse_messages(checker_output):
+def parse_messages(checker_output, regexp):
     messages = []
     for i, line in enumerate(checker_output.splitlines()):
-        first_colon = line.find(':')
-        if first_colon == -1:
-            continue
-        second_colon = line.find(':', first_colon + 1)
-        third_colon = line.find(':', second_colon + 1)
-        try:
-            lineno = int(line[first_colon + 1:second_colon]) - 1
-            if third_colon != -1:
-                col = int(line[second_colon + 1:third_colon]) - 1
-                text = line[third_colon + 1:]
-            else:
-                col = None
-                text = line[second_colon + 1:]
-            text = text.strip()
-            if text == 'invalid syntax':
-                col = invalid_syntax_col(checker_output, i)
-        except ValueError:
-            continue
-
-        messages.append({'lineno': lineno, 'col': col, 'text': text})
+        match = regexp(line)
+        if match:
+            filename, lineno, col, text = match
+            messages.append({
+                'lineno': int(lineno) - 1,
+                'col': int(col) - 1,
+                'text': text})
 
     return messages
 
