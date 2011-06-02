@@ -21,9 +21,10 @@ def parsePyflakes(line):
         filename, lineno, text = match.groups()
         return (filename, lineno, 0, text)
 
-PYTHON = "python.exe"
-CHECKERS = [('c:\Python26\Scripts\pep8-script.py', parsePEP8),
-            ('c:\Python26\Scripts\pyflakes-script.py', parsePyflakes)]
+CHECKERS = [
+    (['python.exe', 'c:\Python26\Scripts\pep8-script.py', '-r'], parsePEP8),
+    (['python.exe', 'c:\Python26\Scripts\pyflakes-script.py'], parsePyflakes)
+    ]
 
 
 global view_messages
@@ -53,7 +54,7 @@ def check_and_mark(view):
     messages = []
 
     for checker, regexp in CHECKERS:
-        p = Popen([PYTHON, checker, view.file_name()],
+        p = Popen(checker + [view.file_name()],
             stdout=PIPE, stderr=PIPE)
         stdout, stderr = p.communicate(None)
         if stdout:
