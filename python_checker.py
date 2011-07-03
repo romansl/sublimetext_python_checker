@@ -22,8 +22,8 @@ def parsePyflakes(line):
         return (filename, lineno, 0, text)
 
 CHECKERS = [
-    (['python.exe', 'c:\Python26\Scripts\pep8-script.py', '-r'], parsePEP8),
-    (['python.exe', 'c:\Python26\Scripts\pyflakes-script.py'], parsePyflakes)
+    (['pythonw.exe', 'c:\Python26\Scripts\pep8-script.py', '-r', '--ignore=E501'], parsePEP8),
+    (['pythonw.exe', 'c:\Python26\Scripts\pyflakes-script.py'], parsePyflakes)
     ]
 
 
